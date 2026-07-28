@@ -1,0 +1,4494 @@
+<script>
+'use strict';
+
+/*============================================================
+    TRUEMEDS RTO & REATTEMPT PORTAL
+    JavaScript Version : 4.0
+    Production Build
+============================================================*/
+
+
+/*============================================================
+    APPLICATION CONFIGURATION
+============================================================*/
+
+const APP = Object.freeze({
+
+    VERSION: "4.0",
+
+    COMPANY: "TrueMeds",
+
+    DATE_LOCALE: "en-IN",
+
+    REFRESH_INTERVAL: 60000,
+
+    SESSION_CHECK_INTERVAL: 300000
+
+});
+
+
+/*============================================================
+    PAGE IDENTIFIERS
+============================================================*/
+
+const PAGE = Object.freeze({
+
+    LOGIN: "loginPage",
+
+    RIDER_DASHBOARD: "dashboardPage",
+
+    SUBMISSION: "submissionPage",
+
+    MY_SUBMISSIONS: "mySubmissionPage",
+
+    ADMIN_DASHBOARD: "adminDashboardPage",
+
+    REVIEW_REQUEST: "reviewRequestPage"
+
+});
+
+
+/*============================================================
+    GLOBAL STATE
+============================================================*/
+
+let currentUser = null;
+
+let currentSubmission = null;
+
+let dashboardData = {};
+
+let reasonsMaster = [];
+
+let autoRefreshTimer = null;
+
+let sessionTimer = null;
+
+let loadingCounter = 0;
+
+let mandatoryProofRequired = false;
+
+let isSubmitting = false;
+
+let isReviewing = false;
+
+let pageHistory = [];
+
+let lastFocusedElement = null;
+
+let timers = {
+
+    clock: null
+
+};
+
+
+/*============================================================
+    DOM HELPERS
+============================================================*/
+
+function $(id) {
+
+    return document.getElementById(id);
+
+}
+
+
+function exists(id) {
+
+    return $(id) !== null;
+
+}
+
+
+function show(id) {
+
+    if (exists(id)) {
+
+        $(id).style.display = "";
+
+    }
+
+}
+
+
+function hide(id) {
+
+    if (exists(id)) {
+
+        $(id).style.display = "none";
+
+    }
+
+}
+
+
+function setText(id, value) {
+
+    if (exists(id)) {
+
+        $(id).textContent = value ?? "";
+
+    }
+
+}
+
+
+function setHTML(id, value) {
+
+    if (exists(id)) {
+
+        $(id).innerHTML = value ?? "";
+
+    }
+
+}
+
+
+function setValue(id, value) {
+
+    if (exists(id)) {
+
+        $(id).value = value ?? "";
+
+    }
+
+}
+
+
+function getValue(id) {
+
+    if (!exists(id)) {
+
+        return "";
+
+    }
+
+    return $(id).value.trim();
+
+}
+
+
+function enable(id) {
+
+    if (exists(id)) {
+
+        $(id).disabled = false;
+
+    }
+
+}
+
+
+function disable(id) {
+
+    if (exists(id)) {
+
+        $(id).disabled = true;
+
+    }
+
+}
+
+
+function clearHTML(id) {
+
+    if (exists(id)) {
+
+        $(id).innerHTML = "";
+
+    }
+
+}
+
+
+function focus(id) {
+
+    if (exists(id)) {
+
+        $(id).focus();
+
+    }
+
+}
+/*============================================================
+    PAGE NAVIGATION
+============================================================*/
+
+function showPage(pageId) {
+
+    Object.values(PAGE).forEach(function (page) {
+
+        hide(page);
+
+    });
+
+    show(pageId);
+
+    pageHistory.push(pageId);
+
+}
+
+
+function backPage() {
+
+    if (pageHistory.length <= 1) {
+
+        return;
+
+    }
+
+    pageHistory.pop();
+
+    showPage(pageHistory.pop());
+
+}
+
+
+/*============================================================
+    LOADER
+============================================================*/
+
+function showLoader() {
+
+    loadingCounter++;
+
+    document.querySelectorAll(".loader").forEach(function (loader) {
+
+        loader.style.display = "flex";
+
+    });
+
+}
+
+
+function hideLoader() {
+
+    loadingCounter = Math.max(0, loadingCounter - 1);
+
+    if (loadingCounter > 0) {
+
+        return;
+
+    }
+
+    document.querySelectorAll(".loader").forEach(function (loader) {
+
+        loader.style.display = "none";
+
+    });
+
+}
+/*============================================================
+    ALERT HELPERS
+============================================================*/
+
+function info(message) {
+
+    hideLoader();
+
+    alert(message);
+
+}
+
+
+function success(message) {
+
+    hideLoader();
+
+    alert(message);
+
+}
+
+
+function error(message) {
+
+    hideLoader();
+
+    alert(message);
+
+}
+
+
+function ask(message) {
+
+    return confirm(message);
+
+}
+
+
+/*============================================================
+    END OF PART 1
+============================================================*/
+/*============================================================
+    DATE & TIME HELPERS
+============================================================*/
+
+function formatDate(value) {
+
+    if (!value) {
+
+        return "";
+
+    }
+
+    try {
+
+        return new Date(value).toLocaleDateString(
+
+            APP.DATE_LOCALE,
+
+            {
+
+                day: "2-digit",
+
+                month: "short",
+
+                year: "numeric"
+
+            }
+
+        );
+
+    }
+
+    catch (e) {
+
+        return value;
+
+    }
+
+}
+
+
+function formatDateTime(value) {
+
+    if (!value) {
+
+        return "";
+
+    }
+
+    try {
+
+        return new Date(value).toLocaleString(
+
+            APP.DATE_LOCALE,
+
+            {
+
+                day: "2-digit",
+
+                month: "short",
+
+                year: "numeric",
+
+                hour: "2-digit",
+
+                minute: "2-digit",
+
+                second: "2-digit"
+
+            }
+
+        );
+
+    }
+
+    catch (e) {
+
+        return value;
+
+    }
+
+}
+
+
+/*============================================================
+    STRING HELPERS
+============================================================*/
+
+function safeString(value) {
+
+    if (
+
+        value === null ||
+
+        value === undefined
+
+    ) {
+
+        return "";
+
+    }
+
+    return String(value).trim();
+
+}
+
+
+function isBlank(value) {
+
+    return safeString(value) === "";
+
+}
+
+
+function escapeHtml(text) {
+
+    return safeString(text)
+
+        .replace(/&/g, "&amp;")
+
+        .replace(/</g, "&lt;")
+
+        .replace(/>/g, "&gt;")
+
+        .replace(/"/g, "&quot;")
+
+        .replace(/'/g, "&#039;");
+
+}
+
+
+function capitalize(text) {
+
+    return safeString(text)
+
+        .toLowerCase()
+
+        .replace(/\b\w/g, function (char) {
+
+            return char.toUpperCase();
+
+        });
+
+}
+/*============================================================
+    BUTTON HELPERS
+============================================================*/
+
+function lockButton(button, caption) {
+
+    if (!button) {
+
+        return;
+
+    }
+
+    button.disabled = true;
+
+    button.style.opacity = ".70";
+
+    button.style.cursor = "not-allowed";
+
+    if (caption) {
+
+        button.innerHTML = caption;
+
+    }
+
+}
+
+
+function unlockButton(button, caption) {
+
+    if (!button) {
+
+        return;
+
+    }
+
+    button.disabled = false;
+
+    button.style.opacity = "1";
+
+    button.style.cursor = "pointer";
+
+    if (caption) {
+
+        button.innerHTML = caption;
+
+    }
+
+}
+/*============================================================
+    LOCAL STORAGE
+============================================================*/
+
+function saveSession(user) {
+
+    currentUser = user;
+
+    localStorage.setItem(
+
+        "tmUser",
+
+        JSON.stringify(user)
+
+    );
+
+}
+
+function getSession() {
+
+    const raw = localStorage.getItem("tmUser");
+
+    if (!raw) {
+
+        return null;
+
+    }
+
+    try {
+
+        currentUser = JSON.parse(raw);
+
+        return currentUser;
+
+    }
+
+    catch (e) {
+
+        localStorage.removeItem("tmUser");
+
+        return null;
+
+    }
+
+}
+
+
+function clearSession() {
+
+    currentUser = null;
+
+    localStorage.removeItem("tmUser");
+
+}
+
+
+/*============================================================
+    APPLICATION RESET
+============================================================*/
+
+function resetApplication() {
+
+    currentSubmission = null;
+
+    dashboardData = {};
+
+    reasonsMaster = [];
+
+    mandatoryProofRequired = false;
+
+    isSubmitting = false;
+
+    isReviewing = false;
+
+}
+
+
+/*============================================================
+    SERVER ERROR HANDLER
+============================================================*/
+
+function serverError(err) {
+
+    console.error(err);
+
+    hideLoader();
+
+    isSubmitting = false;
+
+    isReviewing = false;
+
+    if (exists("submitBtn")) {
+
+        unlockButton(
+            $("submitBtn"),
+            "✅ Submit Request"
+        );
+
+    }
+
+    if (exists("approveBtn")) {
+
+        enable("approveBtn");
+
+    }
+
+    if (exists("rejectBtn")) {
+
+        enable("rejectBtn");
+
+    }
+
+    alert(
+
+        err && err.message
+
+            ? err.message
+
+            : "Unexpected server error."
+
+    );
+
+}
+
+/*============================================================
+    SESSION VALIDATION
+============================================================*/
+
+function validateSession() {
+
+    if (!currentUser) {
+
+        alert(
+
+            "Session Expired. Please login again."
+
+        );
+
+        logout(false);
+
+        return false;
+
+    }
+
+    return true;
+
+}
+
+/*============================================================
+    SESSION RESTORE
+============================================================*/
+
+function restoreSession() {
+
+    const session = getSession();
+
+    if (!session) {
+
+        showPage(PAGE.LOGIN);
+
+        return;
+
+    }
+
+    currentUser = session;
+
+    if (
+
+        safeString(currentUser.role)
+
+            .toUpperCase() === "ADMIN"
+
+    ) {
+
+        openAdminDashboard();
+
+    }
+
+    else {
+
+        openRiderDashboard();
+
+    }
+
+}
+
+
+/*============================================================
+    END OF PART 2
+============================================================*/
+/*============================================================
+    LOGIN MODULE
+============================================================*/
+
+function login() {
+
+    const username = getValue("username");
+
+    const password = exists("password")
+
+        ? $("password").value
+
+        : "";
+
+    const loginButton = $("loginBtn");
+
+    const messageBox = $("loginMessage");
+
+
+    if (messageBox) {
+
+        messageBox.innerHTML = "";
+
+        messageBox.style.color = "#d32f2f";
+
+    }
+
+
+    if (
+
+        isBlank(username) ||
+
+        isBlank(password)
+
+    ) {
+
+        if (messageBox) {
+
+            messageBox.innerHTML =
+
+                "Please enter Username and Password.";
+
+        }
+
+        focus(
+
+            isBlank(username)
+
+                ? "username"
+
+                : "password"
+
+        );
+
+        return;
+
+    }
+
+
+    lockButton(
+
+        loginButton,
+
+        "Logging in..."
+
+    );
+
+    showLoader();
+
+
+    google.script.run
+
+        .withSuccessHandler(handleLoginResponse)
+
+        .withFailureHandler(function (err) {
+
+            hideLoader();
+
+            unlockButton(
+
+                loginButton,
+
+                "LOGIN"
+
+            );
+
+            serverError(err);
+
+        })
+
+        .authenticateUser(
+
+            username,
+
+            password
+
+        );
+
+}
+
+/*============================================================
+    LOGIN RESPONSE
+============================================================*/
+
+function handleLoginResponse(response) {
+
+    hideLoader();
+
+    unlockButton(
+
+        $("loginBtn"),
+
+        "LOGIN"
+
+    );
+
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        if (exists("loginMessage")) {
+
+            $("loginMessage").style.color =
+
+                "#d32f2f";
+
+            $("loginMessage").innerHTML =
+
+                response
+
+                    ? response.message
+
+                    : "Login failed.";
+
+        }
+
+        return;
+
+    }
+
+
+    currentUser = response.user;
+
+    saveSession(currentUser);
+    initializeUserInterface();
+
+
+    if (exists("loginMessage")) {
+
+        $("loginMessage").style.color =
+
+            "#2e7d32";
+
+        $("loginMessage").innerHTML =
+
+            response.message;
+
+    }
+
+
+    setTimeout(function () {
+
+        if (
+
+            safeString(currentUser.role)
+
+                .toUpperCase() === "ADMIN"
+
+        ) {
+
+            openAdminDashboard();
+
+        }
+
+        else {
+
+            openRiderDashboard();
+
+        }
+
+    }, 300);
+
+}
+
+/*============================================================
+    LOGOUT
+============================================================*/
+
+function logout(confirmLogout = true) {
+
+    if (
+
+        confirmLogout &&
+
+        !ask(
+
+            "Are you sure you want to logout?"
+
+        )
+
+    ) {
+
+        return;
+
+    }
+
+
+    stopAutoRefresh();
+
+    stopSessionChecker();
+
+    destroyUserInterface();
+    clearSession();
+
+
+    resetApplication();
+
+
+    google.script.run
+
+        .withFailureHandler(function () {})
+
+        .logout();
+
+
+    showPage(PAGE.LOGIN);
+
+
+    if (exists("loginMessage")) {
+
+        $("loginMessage").innerHTML = "";
+
+    }
+
+
+    if (exists("username")) {
+
+        $("username").value = "";
+
+    }
+
+
+    if (exists("password")) {
+
+        $("password").value = "";
+
+    }
+
+
+    pageHistory = [];
+
+}
+/*============================================================
+    SESSION CHECKER
+============================================================*/
+
+function startSessionChecker() {
+
+    stopSessionChecker();
+
+    sessionTimer = setInterval(function () {
+
+        google.script.run
+
+            .withSuccessHandler(function (session) {
+
+                if (!session) {
+
+                    alert("Session Expired. Please login again.");
+
+                    logout(false);
+
+                }
+
+            })
+
+            .withFailureHandler(function () {
+
+                alert("Session Expired. Please login again.");
+
+                logout(false);
+
+            })
+
+            .getCurrentUser();
+
+    }, APP.SESSION_CHECK_INTERVAL);
+
+}
+
+function stopSessionChecker() {
+
+    if (sessionTimer) {
+
+        clearInterval(sessionTimer);
+
+        sessionTimer = null;
+
+    }
+
+}
+/*============================================================
+    OPEN RIDER DASHBOARD
+============================================================*/
+
+function openRiderDashboard() {
+
+    if (!validateSession()) {
+
+        return;
+
+    }
+
+    showPage(
+
+        PAGE.RIDER_DASHBOARD
+
+    );
+
+
+    setText(
+
+        "dRider",
+
+        currentUser.riderName
+
+    );
+
+    setText(
+
+        "dEmployee",
+
+        currentUser.employeeId
+
+    );
+
+    setText(
+
+        "dZone",
+
+        currentUser.zone
+
+    );
+
+    setText(
+
+        "dWarehouse",
+
+        currentUser.warehouse
+
+    );
+
+    setText(
+
+        "dHub",
+
+        currentUser.lmHub
+
+    );
+
+    setText(
+
+        "dRole",
+
+        currentUser.role
+
+    );
+
+
+    loadDashboard();
+
+    loadMySubmissions();
+
+    loadReasons();
+
+    startAutoRefresh();
+
+    startSessionChecker();
+
+}
+/*============================================================
+    OPEN ADMIN DASHBOARD
+============================================================*/
+
+function openAdminDashboard() {
+
+    if (!validateSession()) return;
+
+    showPage(PAGE.ADMIN_DASHBOARD);
+
+    setText("adminName", currentUser.riderName);
+
+    loadDashboard();
+
+    startAutoRefresh();
+
+    startSessionChecker();
+}
+/*============================================================
+    END OF PART 3
+============================================================*/
+/*============================================================
+    DASHBOARD LOADER
+============================================================*/
+
+function loadDashboard() {
+
+    if (!validateSession()) {
+
+        return;
+
+    }
+
+    showLoader();
+
+    google.script.run
+
+        .withSuccessHandler(populateDashboard)
+
+        .withFailureHandler(serverError)
+
+        .getDashboardCounts();
+
+}
+
+
+function populateDashboard(response) {
+
+    hideLoader();
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        error(
+
+            response
+
+                ? response.message
+
+                : "Unable to load dashboard."
+
+        );
+
+        return;
+
+    }
+
+    dashboardData = response.data || {};
+
+    if (
+
+        safeString(currentUser.role)
+
+            .toUpperCase() === "ADMIN"
+
+    ) {
+
+        setText(
+
+            "pendingCount",
+
+            dashboardData.pending || 0
+
+        );
+
+        setText(
+
+            "reviewCount",
+
+            dashboardData.review || 0
+
+        );
+
+        setText(
+
+            "approvedCount",
+
+            dashboardData.approved || 0
+
+        );
+
+        setText(
+
+            "rejectedCount",
+
+            dashboardData.rejected || 0
+
+        );
+
+    }
+
+    else {
+
+        setText(
+
+            "submittedCount",
+
+            dashboardData.submitted || 0
+
+        );
+
+        setText(
+
+            "reviewCount",
+
+            dashboardData.review || 0
+
+        );
+
+        setText(
+
+            "approvedCount",
+
+            dashboardData.approved || 0
+
+        );
+
+        setText(
+
+            "rejectedCount",
+
+            dashboardData.rejected || 0
+
+        );
+
+    }
+
+}
+/*============================================================
+    AUTO REFRESH
+============================================================*/
+
+function startAutoRefresh() {
+
+    stopAutoRefresh();
+
+    autoRefreshTimer = setInterval(function () {
+
+        if (!currentUser) {
+
+            return;
+
+        }
+
+        loadDashboard();
+
+    },
+
+    APP.REFRESH_INTERVAL);
+
+}
+
+
+function stopAutoRefresh() {
+
+    if (autoRefreshTimer) {
+
+        clearInterval(
+
+            autoRefreshTimer
+
+        );
+
+        autoRefreshTimer = null;
+
+    }
+
+}
+/*============================================================
+    LOAD REASONS MASTER
+============================================================*/
+
+function loadReasons() {
+
+    showLoader();
+
+    google.script.run
+
+        .withSuccessHandler(function (response) {
+
+            hideLoader();
+
+            reasonsMaster = Array.isArray(response)
+
+                ? response
+
+                : [];
+
+            populateReasonsDropdown();
+
+        })
+
+        .withFailureHandler(function (err) {
+
+            hideLoader();
+
+            serverError(err);
+
+        })
+
+        .getReasons();
+
+}
+/*=========================================================
+  POPULATE REASONS DROPDOWN
+=========================================================*/
+
+function populateReasonsDropdown() {
+
+    const ddl = document.getElementById("reason");
+
+    if (!ddl) return;
+
+    ddl.innerHTML = "";
+
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "-- Select Reason --";
+    ddl.appendChild(defaultOption);
+
+    reasonsMaster.forEach(function(item) {
+
+        const option = document.createElement("option");
+
+        option.value = item.reason;
+        option.textContent = item.reason;
+
+        option.dataset.mandatory = item.mandatory || "NO";
+
+        ddl.appendChild(option);
+
+    });
+
+}
+/*============================================================
+    REASON CHANGED
+============================================================*/
+
+function reasonChanged() {
+
+    const ddl = $("reason");
+
+    if (!ddl) {
+
+        return;
+
+    }
+
+    const option =
+
+        ddl.options[
+
+            ddl.selectedIndex
+
+        ];
+
+    mandatoryProofRequired =
+
+        option &&
+
+        option.dataset &&
+
+        option.dataset.mandatory ===
+
+        "YES";
+
+    if (
+
+        mandatoryProofRequired
+
+    ) {
+
+        show(
+
+            "mandatorySection"
+
+        );
+
+        show(
+
+            "mandatoryStar"
+
+        );
+
+    }
+
+    else {
+
+        hide(
+
+            "mandatorySection"
+
+        );
+
+        hide(
+
+            "mandatoryStar"
+
+        );
+
+        if (
+
+            exists(
+
+                "mandatoryFile"
+
+            )
+
+        ) {
+
+            $("mandatoryFile").value =
+
+                "";
+
+        }
+
+        setText(
+
+            "mandatoryFileName",
+
+            "No file selected"
+
+        );
+
+    }
+
+}
+
+
+/*============================================================
+    OPEN NEW SUBMISSION
+============================================================*/
+
+function openSubmissionPage() {
+
+    clearSubmissionForm();
+
+    showPage(
+
+        PAGE.SUBMISSION
+
+    );
+
+}
+
+
+/*============================================================
+    BACK TO DASHBOARD
+============================================================*/
+
+function backDashboard() {
+
+    clearSubmissionForm();
+
+    if (
+
+        safeString(
+
+            currentUser.role
+
+        ).toUpperCase() ===
+
+        "ADMIN"
+
+    ) {
+
+        openAdminDashboard();
+
+    }
+
+    else {
+
+        openRiderDashboard();
+
+    }
+
+}
+
+
+/*============================================================
+    REFRESH DASHBOARD
+============================================================*/
+
+function refreshDashboard() {
+
+    loadDashboard();
+
+}
+
+
+/*============================================================
+    END OF PART 4
+============================================================*/
+/*============================================================
+    CLEAR SUBMISSION FORM
+============================================================*/
+
+function clearSubmissionForm() {
+
+    currentSubmission = null;
+
+    mandatoryProofRequired = false;
+
+    if (exists("orderNumber")) {
+
+        $("orderNumber").value = "";
+
+    }
+
+    if (exists("reason")) {
+
+        $("reason").selectedIndex = 0;
+
+    }
+
+    if (exists("mandatoryFile")) {
+
+        $("mandatoryFile").value = "";
+
+    }
+
+    if (exists("optionalFile")) {
+
+        $("optionalFile").value = "";
+
+    }
+
+    setText(
+
+        "mandatoryFileName",
+
+        "No file selected"
+
+    );
+
+    setText(
+
+        "optionalFileName",
+
+        "No file selected"
+
+    );
+
+    hide("mandatorySection");
+
+    hide("mandatoryStar");
+
+}
+
+
+/*============================================================
+    FILE SELECTION
+============================================================*/
+
+function mandatoryFileSelected() {
+
+    const input = $("mandatoryProof");
+
+    if (!input || input.files.length === 0) {
+
+        return;
+
+    }
+
+    if (
+
+        !validateFile(
+
+            input.files[0],
+
+            true
+
+        )
+
+    ) {
+
+        input.value = "";
+
+        return;
+
+    }
+
+    showSelectedFileInfo(
+
+        "mandatoryProof",
+
+        "mandatoryFileName"
+
+    );
+
+}
+
+
+function optionalFileSelected() {
+
+    const input = $("optionalProof");
+
+    if (!input || input.files.length === 0) {
+
+        return;
+
+    }
+
+    if (
+
+        !validateFile(
+
+            input.files[0]
+
+        )
+
+    ) {
+
+        input.value = "";
+
+        return;
+
+    }
+
+    showSelectedFileInfo(
+
+        "optionalProof",
+
+        "optionalFileName"
+
+    );
+
+}
+
+
+/*============================================================
+    VALIDATE SUBMISSION
+============================================================*/
+
+function validateSubmission() {
+
+    if (isBlank(getValue("orderNumber"))) {
+
+        error("Please enter Order Number.");
+
+        focus("orderNumber");
+
+        return false;
+
+    }
+
+    if (!/^[A-Za-z0-9]+$/.test(getValue("orderNumber"))) {
+
+        error(
+
+            "Order Number should not contain spaces or special characters."
+
+        );
+
+        focus("orderNumber");
+
+        return false;
+
+    }
+
+    if (isBlank(getValue("reason"))) {
+
+        error("Please select Reason.");
+
+        focus("reason");
+
+        return false;
+
+    }
+
+    if (
+
+        mandatoryProofRequired &&
+
+        (
+
+            !exists("mandatoryFile") ||
+
+            $("mandatoryFile").files.length === 0
+
+        )
+
+    ) {
+
+        error(
+
+            "Mandatory proof is required."
+
+        );
+
+        return false;
+
+    }
+
+    return true;
+
+}
+
+
+/*============================================================
+    SUBMIT REQUEST
+============================================================*/
+
+function submitRequest() {
+
+    if (isSubmitting) {
+
+        return;
+
+    }
+
+    normalizeSubmissionData();
+
+    if (!validateSubmission()) {
+
+        return;
+
+    }
+
+    isSubmitting = true;
+
+    lockButton(
+
+        $("submitBtn"),
+
+        "Submitting..."
+
+    );
+
+    showLoader();
+
+    uploadFilesAndSubmit();
+
+}
+
+/*============================================================
+    UPLOAD FILES
+============================================================*/
+
+async function uploadFilesAndSubmit() {
+
+    try {
+
+        const files = await prepareSubmissionFiles();
+
+        const request = {
+
+            orderNumber: getValue("orderNumber"),
+
+            reason: getValue("reason")
+
+        };
+
+        processSubmission(
+
+            request,
+
+            files.mandatory,
+
+            files.optional
+
+        );
+
+    }
+
+    catch (err) {
+
+        hideLoader();
+
+        unlockButton(
+
+            $("submitBtn"),
+
+            "✅ Submit Request"
+
+        );
+
+        isSubmitting = false;
+
+        showMessage(
+
+            err.message ||
+
+            "Unable to process selected files.",
+
+            false
+
+        );
+
+    }
+
+}
+/*============================================================
+    PROCESS SUBMISSION
+============================================================*/
+
+function processSubmission(
+
+    request,
+
+    mandatoryFile,
+
+    optionalFile
+
+) {
+
+    const payload = {
+
+        orderNumber: request.orderNumber,
+
+        reason: request.reason,
+
+        mandatoryFile: mandatoryFile,
+
+        optionalFile: optionalFile
+
+    };
+
+    google.script.run
+
+        .withSuccessHandler(
+
+            submissionCompleted
+
+        )
+
+        .withFailureHandler(
+
+            submissionFailed
+
+        )
+
+        .saveSubmission(payload);
+
+}
+/*============================================================
+    SUBMISSION SUCCESS
+============================================================*/
+
+function submissionCompleted(response) {
+
+     hideLoader();
+
+     isSubmitting = false;
+
+     unlockButton(
+     $("submitBtn"),
+     "✅ Submit Request"
+     );
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        error(
+
+            response
+
+                ? response.message
+
+                : "Unable to submit request."
+
+        );
+
+        return;
+
+    }
+
+    success(response.message);
+
+    clearSubmissionForm();
+
+    openRiderDashboard();
+
+}
+
+
+/*============================================================
+    SUBMISSION FAILURE
+============================================================*/
+
+function submissionFailed(err) {
+
+    hideLoader();
+
+    isSubmitting = false;
+
+    unlockButton(
+        $("submitBtn"),
+        "✅ Submit Request"
+    );
+
+    console.log(err);
+
+    serverError(err);
+
+}
+
+/*============================================================
+    END OF PART 5
+============================================================*/
+/*============================================================
+    MY SUBMISSIONS
+============================================================*/
+
+function openMySubmissions() {
+
+    if (!validateSession()) {
+
+        return;
+
+    }
+
+    showPage(PAGE.MY_SUBMISSIONS);
+
+    loadMySubmissions();
+
+}
+
+
+function loadMySubmissions() {
+
+    if (!validateSession()) {
+
+        return;
+
+    }
+
+    showLoader();
+
+    google.script.run
+
+    .withSuccessHandler(function(response){
+
+    console.log("SERVER RESPONSE =", response);
+
+    renderMySubmissions(response);
+
+})
+
+    .withFailureHandler(function(err){
+
+        console.error(err);
+
+          hideLoader();
+
+        serverError(err);
+
+    })
+
+    .getMySubmissions();
+
+}
+
+/*============================================================
+    RENDER MY SUBMISSIONS
+============================================================*/
+
+function renderMySubmissions(response) {
+
+    hideLoader();
+
+    console.log("Response:", response);
+
+    console.log("Total Records:", response ? response.length : 0);
+
+    const tbody = $("mySubmissionTableBody");
+
+    if (!tbody) {
+
+        return;
+
+    }
+
+    tbody.innerHTML = "";
+
+    const list = Array.isArray(response)
+
+        ? response
+
+        : [];
+
+    if (list.length === 0) {
+
+        tbody.innerHTML =
+
+            '<tr><td colspan="5" class="text-center">No records found.</td></tr>';
+
+        const count = $("submissionCount");
+
+        if (count) {
+
+            count.innerHTML =
+
+                "Showing 0 submission(s).";
+
+        }
+
+        return;
+
+    }
+
+    list.forEach(function (item) {
+
+        try {
+
+            tbody.appendChild(
+
+                createSubmissionRow(item)
+
+            );
+
+        }
+
+        catch (e) {
+
+            console.error(
+
+                "Unable to render submission row:",
+
+                e,
+
+                item
+
+            );
+
+        }
+
+    });
+
+    const count = $("submissionCount");
+
+    if (count) {
+
+        count.innerHTML =
+
+            "Showing " +
+
+            list.length +
+
+            " submission(s).";
+
+    }
+
+    /* Apply current search filter after loading */
+
+    if (
+
+        exists("submissionSearch") &&
+
+        getValue("submissionSearch").trim() !== ""
+
+    ) {
+
+        filterMySubmissions();
+
+    }
+
+}
+/*============================================================
+    CREATE SUBMISSION ROW
+============================================================*/
+
+function createSubmissionRow(item) {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+
+        <td class="submissionIdCell"
+            title="${escapeHtml(item.submissionId || "-")}">
+
+            ${escapeHtml(item.submissionId || "-")}
+
+        </td>
+
+        <td class="dateCell">
+
+            ${escapeHtml(item.submittedOn || "-")}
+
+        </td>
+
+        <td class="orderCell">
+
+            ${escapeHtml(item.orderNumber || "-")}
+
+        </td>
+
+        <td class="statusCell">
+
+            ${statusBadge(item.status)}
+
+        </td>
+
+        <td class="detailsCell">
+
+            <button
+                class="viewDetailsBtn"
+                type="button"
+                onclick='showSubmissionDetails(${JSON.stringify(item)})'>
+
+                👁 View
+
+            </button>
+
+        </td>
+
+    `;
+
+    return tr;
+
+}
+
+/*============================================================
+    SHOW SUBMISSION DETAILS
+============================================================*/
+
+function showSubmissionDetails(item) {
+
+    lastFocusedElement = document.activeElement;
+
+    const body = $("submissionDetailsBody");
+
+    if (!body) {
+
+        return;
+
+    }
+
+    body.innerHTML = `
+
+        <table class="detailsTable">
+
+            <tr>
+
+                <th>Submission ID</th>
+
+                <td>${escapeHtml(item.submissionId || "-")}</td>
+
+            </tr>
+
+            <tr>
+
+                <th>Submitted On</th>
+
+                <td>${escapeHtml(item.submittedOn || "-")}</td>
+
+            </tr>
+
+            <tr>
+
+                <th>Order Number</th>
+
+                <td>${escapeHtml(item.orderNumber || "-")}</td>
+
+            </tr>
+
+            <tr>
+
+                <th>Reason</th>
+
+                <td>${escapeHtml(item.reason || "-")}</td>
+
+            </tr>
+
+            <tr>
+
+                <th>Mandatory Proof</th>
+
+                <td>${proofLink(item.mandatoryProof,"Mandatory Proof")}</td>
+
+            </tr>
+
+            <tr>
+
+                <th>Optional Proof</th>
+
+                <td>${proofLink(item.optionalProof,"Optional Proof")}</td>
+
+            </tr>
+
+        </table>
+
+        <div class="timelineCard">
+
+            <div class="timelineRow">
+
+                <div class="timelineTitle">
+
+                    📌 Latest Status
+
+                </div>
+
+                <div class="timelineText">
+
+                    ${statusBadge(item.status)}
+
+                </div>
+
+            </div>
+
+            <div class="timelineRow">
+
+                <div class="timelineTitle">
+
+                    👤 Assigned To
+
+                </div>
+
+                <div class="timelineText">
+
+                    ${escapeHtml(item.assignedTo || "Not Assigned Yet")}
+
+                </div>
+
+            </div>
+
+            <div class="timelineRow">
+
+                <div class="timelineTitle">
+
+                    📝 Hub Manager Remarks
+
+                </div>
+
+                <div class="timelineText">
+
+                    ${escapeHtml(item.managerRemarks || "No remarks available.")}
+
+                </div>
+
+            </div>
+
+            <div class="timelineRow">
+
+                <div class="timelineTitle">
+
+                    ✅ Reviewed By
+
+                </div>
+
+                <div class="timelineText">
+
+                    ${escapeHtml(item.reviewedBy || "-")}
+
+                </div>
+
+            </div>
+
+            <div class="timelineRow">
+
+                <div class="timelineTitle">
+
+                    📅 Reviewed On
+
+                </div>
+
+                <div class="timelineText">
+
+                    ${escapeHtml(item.reviewedOn || "-")}
+
+                </div>
+
+            </div>
+
+            <div class="timelineRow">
+
+                <div class="timelineTitle">
+
+                    ⏱ Last Updated
+
+                </div>
+
+                <div class="timelineText">
+
+                    ${escapeHtml(item.lastUpdated || "-")}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+    const modal = $("submissionDetailsModal");
+
+document.body.style.overflow = "hidden";
+
+modal.style.display = "flex";
+
+const closeBtn = modal.querySelector(".closeModalBtn");
+
+if (closeBtn) {
+    closeBtn.focus();
+}
+
+}
+
+/*============================================================
+    CLOSE SUBMISSION DETAILS
+============================================================*/
+
+function closeSubmissionDetails() {
+
+    document.body.style.overflow = "";
+
+$("submissionDetailsModal").style.display = "none";
+
+if (
+    lastFocusedElement &&
+    typeof lastFocusedElement.focus === "function"
+) {
+    lastFocusedElement.focus();
+}
+
+}
+/*============================================================
+    ESC KEY SUPPORT FOR DETAILS POPUP
+============================================================*/
+
+document.addEventListener("keydown", function(event){
+
+    if(event.key === "Escape"){
+
+        if(
+
+            exists("submissionDetailsModal") &&
+
+            $("submissionDetailsModal").style.display === "flex"
+
+        ){
+
+            closeSubmissionDetails();
+
+        }
+
+    }
+
+});
+/*============================================================
+    STATUS BADGE
+============================================================*/
+
+function statusBadge(status) {
+
+    status = safeString(status).toUpperCase();
+
+    let css = "badge-secondary";
+
+    let icon = "";
+
+    switch (status) {
+
+        case "SUBMITTED":
+
+            css = "badge-primary";
+
+            icon = "🟡 ";
+
+            break;
+
+        case "UNDER REVIEW":
+
+            css = "badge-warning";
+
+            icon = "🔵 ";
+
+            break;
+
+        case "APPROVED":
+
+            css = "badge-success";
+
+            icon = "🟢 ";
+
+            break;
+
+        case "REJECTED":
+
+            css = "badge-danger";
+
+            icon = "🔴 ";
+
+            break;
+
+    }
+
+    return `<span class="badge ${css}">${icon}${escapeHtml(status)}</span>`;
+
+}
+
+
+/*============================================================
+    PROOF LINK
+============================================================*/
+
+function proofLink(link, text) {
+
+    if (
+
+        !link ||
+
+        safeString(link).trim() === ""
+
+    ) {
+
+        return "-";
+
+    }
+
+    return `
+
+        <a
+
+            href="${link}"
+
+            target="_blank"
+
+            class="proofButton">
+
+            👁 View
+
+        </a>
+
+    `;
+
+}
+
+/*============================================================
+    ACTION BUTTON
+============================================================*/
+
+function actionButton(item) {
+
+    const status = safeString(item.status).toUpperCase();
+
+    if (
+
+        status === "APPROVED" ||
+
+        status === "REJECTED"
+
+    ) {
+
+        return "-";
+
+    }
+
+    return `
+
+        <button
+
+            class="btn btn-sm btn-primary"
+
+            onclick="viewSubmission('${item.submissionId}')">
+
+            View
+
+        </button>
+
+    `;
+
+}
+
+
+/*============================================================
+    VIEW SUBMISSION
+============================================================*/
+
+function viewSubmission(submissionId) {
+
+    currentSubmission = submissionId;
+
+    google.script.run
+
+        .withSuccessHandler(openSubmissionDetails)
+
+        .withFailureHandler(serverError)
+
+        .getSubmission(submissionId);
+
+}
+
+
+function openSubmissionDetails(response) {
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        error(
+
+            response
+
+                ? response.message
+
+                : "Unable to load request."
+
+        );
+
+        return;
+
+    }
+
+    console.log(response.data);
+
+    info(
+
+        "Detailed request screen will be loaded."
+
+    );
+
+}
+
+
+/*============================================================
+    BACK TO RIDER DASHBOARD
+============================================================*/
+
+function backToRiderDashboard() {
+
+    openRiderDashboard();
+
+}
+
+
+/*============================================================
+    END OF PART 6
+============================================================*/
+/*============================================================
+    ADMIN - PENDING REQUESTS
+============================================================*/
+
+/*============================================================
+    ASSIGN NEXT REQUEST
+============================================================*/
+
+function assignSubmission() {
+
+    if (!validateSession()) {
+
+        return;
+
+    }
+
+    if (
+
+        !ask(
+
+            "Assign the next available request to yourself?"
+
+        )
+
+    ) {
+
+        return;
+
+    }
+
+    showLoader();
+
+    google.script.run
+    .withSuccessHandler(assignCompleted)
+    .withFailureHandler(function (err) {
+
+        hideLoader();
+
+        serverError(err);
+
+    })
+    .assignRequest();
+
+}
+
+
+function assignCompleted(response) {
+
+    hideLoader();
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        error(
+
+            response
+
+                ? response.message
+
+                : "Unable to assign request."
+
+        );
+
+        return;
+
+    }
+
+     success(response.message);
+
+     loadAssignedRequest();
+
+     loadDashboard();
+
+}
+
+/*============================================================
+    LOAD MY ASSIGNED REQUEST
+============================================================*/
+
+function loadAssignedRequest() {
+
+    if (!validateSession()) {
+
+        return;
+
+    }
+
+    showLoader();
+
+    google.script.run
+
+        .withSuccessHandler(openAssignedRequest)
+
+        .withFailureHandler(function (err) {
+
+            hideLoader();
+
+            serverError(err);
+
+        })
+
+        .getAssignedRequest();
+
+}
+
+function openAssignedRequest(response) {
+
+    hideLoader();
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        info(
+
+            response
+
+                ? response.message
+
+                : "No assigned request."
+
+        );
+
+        return;
+
+    }
+
+    currentSubmission = response.data;
+
+    populateReviewScreen(response.data);
+
+}
+/*============================================================
+    OPEN REVIEW PAGE
+============================================================*/
+
+function populateReviewScreen(request) {
+
+    showPage(
+
+        PAGE.REVIEW_REQUEST
+
+    );
+
+    setText(
+
+        "reviewSubmissionId",
+
+        request.submissionId
+
+    );
+
+    setText(
+
+        "reviewOrder",
+
+        request.orderNumber
+
+    );
+
+    setText(
+
+        "reviewReason",
+
+        request.reason
+
+    );
+
+    setText(
+
+        "reviewRider",
+
+        request.riderName
+
+    );
+
+    setText(
+
+        "reviewEmployee",
+
+        request.employeeId
+
+    );
+
+    setHTML(
+
+        "reviewMandatoryProof",
+
+        proofLink(
+    request.mandatoryProof,
+    "Mandatory Proof"
+)
+
+    );
+
+    setHTML(
+
+        "reviewOptionalProof",
+
+        proofLink(
+    request.optionalProof,
+    "Optional Proof"
+)
+
+    );
+
+    setValue(
+
+    "reviewRemarks",
+
+    ""
+
+    );
+
+    focus("reviewRemarks");
+
+}
+
+/*============================================================
+    BACK TO ADMIN DASHBOARD
+============================================================*/
+
+function backToAdminDashboard() {
+
+    openAdminDashboard();
+
+}
+
+
+/*============================================================
+    END OF PART 7
+============================================================*/
+/*============================================================
+    REVIEW ACTIONS
+============================================================*/
+
+function approveCurrentRequest() {
+
+    processReview("APPROVED");
+
+}
+
+
+function rejectCurrentRequest() {
+
+    processReview("REJECTED");
+
+}
+/*============================================================
+    PROCESS REVIEW
+============================================================*/
+
+function processReview(action) {
+
+    if (!validateSession()) {
+
+        return;
+
+    }
+
+    if (isReviewing) {
+
+        return;
+
+    }
+
+    if (!currentSubmission) {
+
+        error("No request is available for review.");
+
+        return;
+
+    }
+
+     const remarks = safeString(
+     getValue("reviewRemarks")
+     ).trim();
+
+     if (isBlank(remarks)) {
+
+     error("Hub Manager Remarks are mandatory.");
+
+     focus("reviewRemarks");
+
+     return;
+
+}
+
+    const confirmation =
+
+        action === "APPROVED"
+
+            ? "Approve this request?"
+
+            : "Reject this request?";
+
+    if (!ask(confirmation)) {
+
+        return;
+
+    }
+
+    isReviewing = true;
+
+    showLoader();
+
+    disable("approveBtn");
+
+    disable("rejectBtn");
+
+    if (action === "APPROVED") {
+
+        google.script.run
+
+            .withSuccessHandler(reviewCompleted)
+
+            .withFailureHandler(reviewFailed)
+
+            .approveRequest(
+
+                currentSubmission.submissionId,
+
+                remarks
+
+            );
+
+    }
+
+    else {
+
+        google.script.run
+
+            .withSuccessHandler(reviewCompleted)
+
+            .withFailureHandler(reviewFailed)
+
+            .rejectRequest(
+
+                currentSubmission.submissionId,
+
+                remarks
+
+            );
+
+    }
+
+}
+
+/*============================================================
+    REVIEW SUCCESS
+============================================================*/
+
+function reviewCompleted(response) {
+
+    hideLoader();
+
+    isReviewing = false;
+
+    enable("approveBtn");
+
+    enable("rejectBtn");
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        error(
+
+            response
+
+                ? response.message
+
+                : "Unable to complete review."
+
+        );
+
+        return;
+
+    }
+
+      success(response.message);
+
+      currentSubmission = null;
+
+      clearReviewScreen();
+
+      openAdminDashboard();
+
+}
+/*============================================================
+    REVIEW FAILURE
+============================================================*/
+
+function reviewFailed(err) {
+
+    hideLoader();
+
+    isReviewing = false;
+
+    enable("approveBtn");
+
+    enable("rejectBtn");
+
+    serverError(err);
+
+}
+/*============================================================
+    REVIEW TIMER
+============================================================*/
+
+function startReviewTimer(minutes) {
+
+    const timer = $("reviewTimer");
+
+    if (!timer) {
+
+        return;
+
+    }
+
+    let remaining = minutes * 60;
+
+    if (window.reviewCountdown) {
+
+        clearInterval(window.reviewCountdown);
+
+    }
+
+    window.reviewCountdown = setInterval(function () {
+
+        const mins = Math.floor(remaining / 60);
+
+        const secs = remaining % 60;
+
+        timer.innerHTML =
+
+            String(mins).padStart(2, "0") +
+
+            ":" +
+
+            String(secs).padStart(2, "0");
+
+        if (remaining <= 0) {
+
+            clearInterval(window.reviewCountdown);
+
+            alert(
+
+                "Review session expired."
+
+            );
+
+            backToAdminDashboard();
+
+            return;
+
+        }
+
+        remaining--;
+
+    }, 1000);
+
+}
+
+
+/*============================================================
+    STOP REVIEW TIMER
+============================================================*/
+
+function stopReviewTimer() {
+
+    if (window.reviewCountdown) {
+
+        clearInterval(window.reviewCountdown);
+
+        window.reviewCountdown = null;
+
+    }
+
+}
+
+
+/*============================================================
+    LOAD AUDIT HISTORY
+============================================================*/
+
+function loadAuditHistory(submissionId) {
+
+    const tbody = $("auditTableBody");
+
+    if (tbody) {
+
+        tbody.innerHTML =
+
+            '<tr><td colspan="6">Loading...</td></tr>';
+
+    }
+
+    google.script.run
+
+        .withSuccessHandler(renderAuditHistory)
+
+        .withFailureHandler(serverError)
+
+        .getAuditHistory(submissionId);
+
+}
+
+
+/*============================================================
+    RENDER AUDIT HISTORY
+============================================================*/
+
+function renderAuditHistory(response) {
+
+    const tbody = $("auditTableBody");
+
+    if (!tbody) {
+
+        return;
+
+    }
+
+    tbody.innerHTML = "";
+
+    if (
+
+        !response ||
+
+        !response.success
+
+    ) {
+
+        tbody.innerHTML =
+
+            '<tr><td colspan="6">No audit history available.</td></tr>';
+
+        return;
+
+    }
+
+    const history = response.data || [];
+
+    if (history.length === 0) {
+
+        tbody.innerHTML =
+
+            '<tr><td colspan="6">No audit history available.</td></tr>';
+
+        return;
+
+    }
+
+    history.forEach(function (item) {
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+
+            <td>${formatDateTime(item.timestamp)}</td>
+
+            <td>${escapeHtml(item.action)}</td>
+
+            <td>${escapeHtml(item.oldStatus)}</td>
+
+            <td>${escapeHtml(item.newStatus)}</td>
+
+            <td>${escapeHtml(item.performedBy)}</td>
+
+            <td>${escapeHtml(item.remarks)}</td>
+
+        `;
+
+        tbody.appendChild(tr);
+
+    });
+
+}
+
+
+/*============================================================
+    END OF PART 8
+============================================================*/
+/*============================================================
+    READ FILE AS BASE64
+============================================================*/
+
+function readFileAsBase64(file) {
+
+    return new Promise(function (resolve, reject) {
+
+        if (!file) {
+
+            resolve(null);
+
+            return;
+
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+
+            const result = event.target.result;
+
+            resolve({
+
+                fileName: file.name,
+
+                mimeType: file.type,
+
+                data: result.split(",")[1]
+
+            });
+
+        };
+
+        reader.onerror = function () {
+
+            reject(
+
+                new Error(
+
+                    "Unable to read selected file."
+
+                )
+
+            );
+
+        };
+
+        reader.readAsDataURL(file);
+
+    });
+
+}
+
+
+async function prepareSubmissionFiles() {
+
+    const mandatory =
+
+        exists("mandatoryFile") &&
+
+        $("mandatoryFile").files.length
+
+            ? $("mandatoryFile").files[0]
+
+            : null;
+
+    const optional =
+
+        exists("optionalFile") &&
+
+        $("optionalFile").files.length
+
+            ? $("optionalFile").files[0]
+
+            : null;
+
+    return {
+
+        mandatory: await readFileAsBase64(mandatory),
+
+        optional: await readFileAsBase64(optional)
+
+    };
+
+}
+/*============================================================
+    VALIDATE FILE
+============================================================*/
+
+function validateFile(input, type) {
+
+    if (!input || !input.files || input.files.length === 0) {
+
+        return true;
+
+    }
+
+    const file = input.files[0];
+
+    const maxSize = 20 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+
+        alert("Maximum allowed file size is 20 MB.");
+
+        input.value = "";
+
+        updateSelectedFileName(type, "");
+
+        return false;
+
+    }
+
+    const allowedTypes = [
+
+        "image/",
+
+        "video/",
+
+        "audio/",
+
+        "application/pdf"
+
+    ];
+
+    const valid = allowedTypes.some(function (item) {
+
+        if (item.endsWith("/")) {
+
+            return file.type.startsWith(item);
+
+        }
+
+        return file.type === item;
+
+    });
+
+    if (!valid) {
+
+        alert("Unsupported file type.");
+
+        input.value = "";
+
+        updateSelectedFileName(type, "");
+
+        return false;
+
+    }
+
+    updateSelectedFileName(type, file.name);
+
+    return true;
+
+}
+/*============================================================
+    UPDATE FILE NAME
+============================================================*/
+
+function updateSelectedFileName(type, fileName) {
+
+    const label =
+
+        type === "mandatory"
+
+            ? $("mandatoryFileName")
+
+            : $("optionalFileName");
+
+    if (!label) {
+
+        return;
+
+    }
+
+    label.textContent =
+
+        fileName && fileName.trim() !== ""
+
+            ? "📂 " + fileName
+
+            : "📂 No file selected";
+
+}
+
+
+/*============================================================
+    SEARCH UTILITIES
+============================================================*/
+
+function filterTable(inputId, tableId) {
+
+    const keyword = getValue(inputId).toUpperCase();
+
+    const table = $(tableId);
+
+    if (!table) {
+
+        return;
+
+    }
+
+    const rows = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < rows.length; i++) {
+
+        let found = false;
+
+        const cols = rows[i].getElementsByTagName("td");
+
+        for (let j = 0; j < cols.length; j++) {
+
+            if (
+
+                cols[j].textContent
+
+                    .toUpperCase()
+
+                    .indexOf(keyword) > -1
+
+            ) {
+
+                found = true;
+
+                break;
+
+            }
+
+        }
+
+        rows[i].style.display =
+
+            found ? "" : "none";
+
+    }
+
+}
+
+/*============================================================
+    FILTER MY SUBMISSIONS
+============================================================*/
+
+function filterMySubmissions() {
+
+    const input = $("submissionSearch");
+
+    const tbody = $("mySubmissionTableBody");
+
+    if (!input || !tbody) {
+
+        return;
+
+    }
+
+    const keyword = input.value.trim().toUpperCase();
+
+    const rows = tbody.getElementsByTagName("tr");
+
+    let visibleCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+
+        const cols = rows[i].getElementsByTagName("td");
+
+        if (cols.length === 0) {
+
+            continue;
+
+        }
+
+        /* Order Number is the FIRST column */
+        const orderNumber = cols[2].textContent.trim().toUpperCase();
+
+        if (
+
+            keyword === "" ||
+
+            orderNumber.indexOf(keyword) > -1
+
+        ) {
+
+            rows[i].style.display = "";
+
+            visibleCount++;
+
+        }
+
+        else {
+
+            rows[i].style.display = "none";
+
+        }
+
+    }
+
+    const count = $("submissionCount");
+
+    if (!count) {
+
+        return;
+
+    }
+
+    if (visibleCount === 0) {
+
+        count.innerHTML =
+
+            "❌ No order exists with this Order Number.";
+
+    }
+
+    else {
+
+        count.innerHTML =
+
+            "Showing " +
+
+            visibleCount +
+
+            " submission(s).";
+
+    }
+
+}
+
+/*============================================================
+    SORT TABLE
+============================================================*/
+
+function sortTable(tableId, columnIndex) {
+
+    const table = $(tableId);
+
+    if (!table) {
+
+        return;
+
+    }
+
+    const tbody = table.tBodies[0];
+
+    const rows =
+
+        Array.from(tbody.rows);
+
+    const ascending =
+
+        table.dataset.sort !== "asc";
+
+    rows.sort(function (a, b) {
+
+        const x =
+
+            a.cells[columnIndex]
+
+                .innerText
+
+                .toUpperCase();
+
+        const y =
+
+            b.cells[columnIndex]
+
+                .innerText
+
+                .toUpperCase();
+
+        if (x < y) {
+
+            return ascending ? -1 : 1;
+
+        }
+
+        if (x > y) {
+
+            return ascending ? 1 : -1;
+
+        }
+
+        return 0;
+
+    });
+
+    rows.forEach(function (row) {
+
+        tbody.appendChild(row);
+
+    });
+
+    table.dataset.sort =
+
+        ascending ? "asc" : "desc";
+
+}
+
+
+/*============================================================
+    CSV EXPORT
+============================================================*/
+
+function exportTableToCSV(tableId, fileName) {
+
+    const table = $(tableId);
+
+    if (!table) {
+
+        return;
+
+    }
+
+    const rows =
+
+        table.querySelectorAll("tr");
+
+    const csv = [];
+
+    rows.forEach(function (row) {
+
+        const cols =
+
+            row.querySelectorAll("th,td");
+
+        const line = [];
+
+        cols.forEach(function (col) {
+
+            let value =
+
+                col.innerText
+
+                    .replace(/"/g, '""');
+
+            line.push(
+
+                `"${value}"`
+
+            );
+
+        });
+
+        csv.push(
+
+            line.join(",")
+
+        );
+
+    });
+
+    const blob =
+
+        new Blob(
+
+            [csv.join("\n")],
+
+            {
+
+                type:
+
+                    "text/csv;charset=utf-8;"
+
+            }
+
+        );
+
+    const url =
+
+        URL.createObjectURL(blob);
+
+    const link =
+
+        document.createElement("a");
+
+    link.href = url;
+
+    link.download =
+
+        fileName + ".csv";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+}
+
+
+/*============================================================
+    TABLE PAGINATION
+============================================================*/
+
+function paginateTable(
+
+    tableId,
+
+    page,
+
+    pageSize
+
+) {
+
+    const table = $(tableId);
+
+    if (!table) {
+
+        return;
+
+    }
+
+    const rows =
+
+        table.tBodies[0].rows;
+
+    const start =
+
+        (page - 1) * pageSize;
+
+    const end =
+
+        start + pageSize;
+
+    for (
+
+        let i = 0;
+
+        i < rows.length;
+
+        i++
+
+    ) {
+
+        rows[i].style.display =
+
+            i >= start &&
+
+            i < end
+
+                ? ""
+
+                : "none";
+
+    }
+
+}
+
+
+/*============================================================
+    RESET TABLE FILTER
+============================================================*/
+
+function resetTableFilter(
+
+    inputId,
+
+    tableId
+
+) {
+
+    setValue(inputId, "");
+
+    filterTable(
+
+        inputId,
+
+        tableId
+
+    );
+
+}
+
+
+/*============================================================
+    REFRESH CURRENT PAGE
+============================================================*/
+
+function refreshCurrentPage() {
+
+    if (!currentUser) {
+
+        return;
+
+    }
+
+    const role =
+
+        safeString(
+
+            currentUser.role
+
+        ).toUpperCase();
+
+    if (role === "ADMIN") {
+
+        openAdminDashboard();
+
+    }
+
+    else {
+
+        openRiderDashboard();
+
+    }
+
+}
+
+
+/*============================================================
+    END OF PART 9
+============================================================*/
+/*============================================================
+    IMAGE / FILE PREVIEW
+============================================================*/
+
+function previewMandatoryFile() {
+
+    previewFile(
+
+        "mandatoryFile",
+
+        "mandatoryPreview"
+
+    );
+
+}
+
+
+function previewOptionalFile() {
+
+    previewFile(
+
+        "optionalFile",
+
+        "optionalPreview"
+
+    );
+
+}
+
+
+function previewFile(fileId, previewId) {
+
+    if (
+
+        !exists(fileId) ||
+
+        !exists(previewId)
+
+    ) {
+
+        return;
+
+    }
+
+    const input = $(fileId);
+
+    const preview = $(previewId);
+
+    preview.innerHTML = "";
+
+    if (
+
+        !input.files ||
+
+        input.files.length === 0
+
+    ) {
+
+        return;
+
+    }
+
+    const file = input.files[0];
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+
+        if (
+
+            file.type.startsWith("image/")
+
+        ) {
+
+            preview.innerHTML =
+
+                `<img src="${e.target.result}"
+                     style="max-width:250px;
+                            max-height:250px;
+                            border-radius:8px;
+                            border:1px solid #ddd;">`;
+
+        }
+
+        else {
+
+            preview.innerHTML =
+
+                `<div class="file-preview">
+
+                    📄 ${escapeHtml(file.name)}
+
+                </div>`;
+
+        }
+
+    };
+
+    reader.readAsDataURL(file);
+
+}
+
+
+/*============================================================
+    DRAG & DROP FILE UPLOAD
+============================================================*/
+
+function registerDropZone(
+
+    zoneId,
+
+    inputId
+
+) {
+
+    const zone = $(zoneId);
+
+    const input = $(inputId);
+
+    if (
+
+        !zone ||
+
+        !input
+
+    ) {
+
+        return;
+
+    }
+
+    [
+
+        "dragenter",
+
+        "dragover"
+
+    ].forEach(function (eventName) {
+
+        zone.addEventListener(
+
+            eventName,
+
+            function (e) {
+
+                e.preventDefault();
+
+                zone.classList.add(
+
+                    "drag-active"
+
+                );
+
+            }
+
+        );
+
+    });
+
+    [
+
+        "dragleave",
+
+        "drop"
+
+    ].forEach(function (eventName) {
+
+        zone.addEventListener(
+
+            eventName,
+
+            function (e) {
+
+                e.preventDefault();
+
+                zone.classList.remove(
+
+                    "drag-active"
+
+                );
+
+            }
+
+        );
+
+    });
+
+    zone.addEventListener(
+
+        "drop",
+
+        function (e) {
+
+            input.files =
+
+                e.dataTransfer.files;
+
+            input.dispatchEvent(
+
+                new Event("change")
+
+            );
+
+        }
+
+    );
+
+}
+
+
+/*============================================================
+    TOAST MESSAGE
+============================================================*/
+
+function showToast(
+
+    message,
+
+    type = "success"
+
+) {
+
+    const toast = $("toast");
+
+    if (!toast) {
+
+        alert(message);
+
+        return;
+
+    }
+
+    toast.className =
+
+        "toast " + type;
+
+    toast.innerHTML = message;
+
+    toast.style.display = "block";
+
+    setTimeout(function () {
+
+        toast.style.display = "none";
+
+    }, 3000);
+
+}
+
+
+/*============================================================
+    NETWORK STATUS
+============================================================*/
+
+function networkOnline() {
+
+    showToast(
+
+        "Internet connection restored.",
+
+        "success"
+
+    );
+
+}
+
+
+function networkOffline() {
+
+    showToast(
+
+        "Internet connection lost.",
+
+        "error"
+
+    );
+
+}
+
+
+/*============================================================
+    FORM VALIDATION HELPERS
+============================================================*/
+
+function highlightError(id) {
+
+    if (!exists(id)) {
+
+        return;
+
+    }
+
+    $(id).classList.add(
+
+        "input-error"
+
+    );
+
+}
+
+
+function clearError(id) {
+
+    if (!exists(id)) {
+
+        return;
+
+    }
+
+    $(id).classList.remove(
+
+        "input-error"
+
+    );
+
+}
+
+
+function clearAllErrors() {
+
+    document
+
+        .querySelectorAll(
+
+            ".input-error"
+
+        )
+
+        .forEach(function (item) {
+
+            item.classList.remove(
+
+                "input-error"
+
+            );
+
+        });
+
+}
+
+
+/*============================================================
+    GLOBAL KEYBOARD SHORTCUTS
+============================================================*/
+
+function registerShortcuts() {
+
+    document.addEventListener(
+
+        "keydown",
+
+        function (e) {
+
+            if (
+
+                e.key === "Escape"
+
+            ) {
+
+                hideLoader();
+
+            }
+
+            if (
+
+                e.ctrlKey &&
+
+                e.key.toLowerCase() === "r"
+
+            ) {
+
+                e.preventDefault();
+
+                refreshCurrentPage();
+
+            }
+
+            if (
+
+                e.ctrlKey &&
+
+                e.key.toLowerCase() === "l"
+
+            ) {
+
+                e.preventDefault();
+
+                logout();
+
+            }
+
+        }
+
+    );
+
+}
+
+
+/*============================================================
+    APPLICATION INITIALIZATION
+============================================================*/
+
+function init() {
+
+    restoreSession();
+
+    registerShortcuts();
+
+    window.addEventListener(
+
+        "online",
+
+        networkOnline
+
+    );
+
+    window.addEventListener(
+
+        "offline",
+
+        networkOffline
+
+    );
+
+    registerDropZone(
+
+        "mandatoryDropZone",
+
+        "mandatoryFile"
+
+    );
+
+    registerDropZone(
+
+        "optionalDropZone",
+
+        "optionalFile"
+
+    );
+
+}
+/*============================================================
+    DOM READY
+============================================================*/
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    init
+
+);
+/*============================================================
+    END OF PART 10
+============================================================*/
+/*============================================================
+    PAGE TITLE
+============================================================*/
+
+function updatePageTitle(title) {
+
+    document.title = APP.COMPANY + " - " + title;
+
+}
+
+
+/*============================================================
+    USER HEADER
+============================================================*/
+
+function updateLoggedInUser() {
+
+    if (!currentUser) {
+
+        return;
+
+    }
+
+    setText(
+        "loggedUserName",
+        currentUser.name || "-"
+    );
+
+    setText(
+        "loggedUserRole",
+        currentUser.role || "-"
+    );
+
+}
+
+
+/*============================================================
+    VERSION
+============================================================*/
+
+function displayApplicationVersion() {
+
+    setText(
+        "appVersion",
+        "Version " + APP.VERSION
+    );
+
+}
+
+
+/*============================================================
+    CLOCK
+============================================================*/
+
+function startClock() {
+
+    if (timers.clock) {
+
+        clearInterval(
+            timers.clock
+        );
+
+    }
+
+    timers.clock = setInterval(function () {
+
+        const now = new Date();
+
+        setText(
+            "currentDateTime",
+            formatDateTime(now)
+        );
+
+    }, 1000);
+
+}
+
+
+function stopClock() {
+
+    if (timers.clock) {
+
+        clearInterval(
+            timers.clock
+        );
+
+        timers.clock = null;
+
+    }
+
+}
+
+
+/*============================================================
+    ROLE BASED VISIBILITY
+============================================================*/
+
+function applyRolePermissions() {
+
+    if (!currentUser) {
+
+        return;
+
+    }
+
+    const role = safeString(
+        currentUser.role
+    ).toUpperCase();
+
+    if (role === "ADMIN") {
+
+        show("adminMenu");
+
+        hide("riderMenu");
+
+    }
+
+    else {
+
+        show("riderMenu");
+
+        hide("adminMenu");
+
+    }
+
+}
+
+
+/*============================================================
+    AFTER LOGIN INITIALIZATION
+============================================================*/
+
+function initializeUserInterface() {
+
+    updateLoggedInUser();
+
+    displayApplicationVersion();
+
+    applyRolePermissions();
+
+    startClock();
+
+}
+/*============================================================
+    APPLICATION SHUTDOWN
+============================================================*/
+
+function destroyUserInterface() {
+
+    stopClock();
+
+}
+/*===========================================================
+    End of Part 11
+=============================================================*/
+/*============================================================
+    ORDER NUMBER VALIDATION
+============================================================*/
+
+function validateOrderNumber(input) {
+
+    if (!input) {
+
+        return;
+
+    }
+
+    let value = input.value.toUpperCase();
+
+    // Allow only A-Z and 0-9
+    value = value.replace(/[^A-Z0-9]/g, "");
+
+    input.value = value;
+
+    if (exists("orderNumberError")) {
+
+        if (value.length === 0) {
+
+            setText(
+
+                "orderNumberError",
+
+                ""
+
+            );
+
+        }
+
+        else if (value.length < 6) {
+
+            setText(
+
+                "orderNumberError",
+
+                "Order Number looks too short."
+
+            );
+
+        }
+
+        else {
+
+            setText(
+
+                "orderNumberError",
+
+                ""
+
+            );
+
+        }
+
+    }
+
+}
+
+
+/*============================================================
+    PREVENT INVALID PASTE
+============================================================*/
+
+function preventInvalidOrderPaste(event) {
+
+    const pasted = (
+
+        event.clipboardData ||
+
+        window.clipboardData
+
+    ).getData("text");
+
+    if (
+
+        /[^a-zA-Z0-9]/.test(pasted)
+
+    ) {
+
+        event.preventDefault();
+
+        error(
+
+            "Only letters and numbers are allowed."
+
+        );
+
+    }
+
+}
+/*============================================================
+    SUBMISSION DATA CLEANUP
+============================================================*/
+
+function normalizeOrderNumber() {
+
+    const orderBox = $("orderNumber");
+
+    if (!orderBox) {
+
+        return;
+
+    }
+
+    orderBox.value = safeString(
+
+        orderBox.value
+
+    )
+
+    .trim()
+
+    .toUpperCase();
+
+}
+
+
+function normalizeSubmissionData() {
+
+    normalizeOrderNumber();
+
+}
+</script>
