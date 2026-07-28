@@ -1,0 +1,140 @@
+<div id="reviewRequestPage" style="display:none;">
+
+    <div class="card">
+
+        <h2>🔍 Review Request</h2>
+
+        <p style="text-align:center;color:#666;margin-bottom:25px;">
+
+            Review the submitted request before taking action.
+
+        </p>
+
+        <table class="dashboardTable">
+
+            <tr>
+
+                <td><b>Order Number</b></td>
+
+                <td id="reviewOrderNumber"></td>
+
+            </tr>
+
+            <tr>
+
+                <td><b>Reason</b></td>
+
+                <td id="reviewReason"></td>
+
+            </tr>
+
+            <tr>
+
+                <td><b>Rider Name</b></td>
+
+                <td id="reviewRider"></td>
+
+            </tr>
+
+            <tr>
+
+                <td><b>LM Hub</b></td>
+
+                <td id="reviewHub"></td>
+
+            </tr>
+
+            <tr>
+
+                <td><b>Mandatory Proof</b></td>
+
+                <td>
+
+                    <a id="mandatoryProofLink"
+                       target="_blank">
+
+                        📎 View Proof
+
+                    </a>
+
+                </td>
+
+            </tr>
+
+            <tr>
+
+                <td><b>Optional Proof</b></td>
+
+                <td>
+
+                    <a id="optionalProofLink"
+                       target="_blank">
+
+                        📎 View Proof
+
+                    </a>
+
+                </td>
+
+            </tr>
+
+        </table>
+
+        <label style="margin-top:25px;">
+
+            Manager Remarks
+
+        </label>
+
+        <textarea
+
+            id="managerRemarks"
+
+            class="textbox"
+
+            rows="5"
+
+            style="resize:vertical;min-height:120px;"
+
+            placeholder="Enter approval/rejection remarks...">
+
+        </textarea>
+
+        <div
+            id="reviewLoader"
+            class="loader">
+        </div>
+
+        <button
+
+            class="loginButton"
+
+            onclick="approveRequest()">
+
+            ✅ Approve
+
+        </button>
+
+        <button
+
+            class="logoutButton"
+
+            onclick="rejectRequest()">
+
+            ❌ Reject
+
+        </button>
+
+        <button
+
+            class="secondaryButton"
+
+            onclick="backToAdminDashboard()">
+
+            ⬅ Back
+
+        </button>
+
+    </div>
+
+</div>
