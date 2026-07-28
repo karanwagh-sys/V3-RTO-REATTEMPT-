@@ -1,0 +1,100 @@
+<div class="card" id="loginPage">
+
+    <div style="text-align:center;">
+
+        <img
+        class="logo"
+        src="https://drive.google.com/thumbnail?id=1BeVMVO-0efBXui7Xc5M3LQD2G3fzPSfH&sz=w600"
+        alt="TrueMeds Logo">
+
+        <div class="company">
+            TrueMeds
+        </div>
+
+        <h2>RTO & Reattempt Portal</h2>
+
+        <p style="
+        color:#666;
+        margin-bottom:25px;
+        font-size:14px;">
+            Sign in to continue
+        </p>
+
+    </div>
+
+    <label for="username">
+        Username
+    </label>
+
+    <input
+        id="username"
+        class="textbox"
+        type="text"
+        autocomplete="username"
+        placeholder="Enter Username">
+
+    <label for="password">
+        Password
+    </label>
+
+    <input
+        id="password"
+        class="textbox"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Enter Password"
+        onkeypress="if(event.key==='Enter'){login();}">
+
+    <div
+        id="loginMessage"
+        style="
+        min-height:22px;
+        margin-top:18px;
+        text-align:center;
+        font-weight:bold;">
+    </div>
+
+    <div
+        id="loginLoader"
+        class="loader">
+    </div>
+
+    <button
+        id="loginBtn"
+        class="loginButton"
+        onclick="login()">
+
+        LOGIN
+
+    </button>
+
+    <div
+        style="
+        margin-top:20px;
+        text-align:center;
+        color:#777;
+        font-size:13px;">
+
+        Forgot Password?<br>
+        Contact your Administrator.
+
+    </div>
+
+    <hr style="
+    margin:25px 0;
+    border:none;
+    border-top:1px solid #eee;">
+
+    <div
+        style="
+        text-align:center;
+        font-size:12px;
+        color:#888;">
+
+        © 2026 TrueMeds<br>
+
+        RTO & Reattempt Management Portal
+
+    </div>
+
+</div>
