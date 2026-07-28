@@ -1,0 +1,206 @@
+<!-- =========================================
+     MY SUBMISSIONS PAGE
+========================================= -->
+
+<div id="mySubmissionPage" style="display:none;">
+
+    <div class="card mySubmissionCard">
+
+        <!-- Page Header -->
+
+        <div class="pageHeader">
+
+            <h2>📄 My Submissions</h2>
+
+            <p>
+
+                View and track all your submitted RTO & Reattempt requests.
+
+            </p>
+
+        </div>
+
+        <!-- Search -->
+
+        <div class="searchSection">
+
+            <label for="submissionSearch">
+
+                Search Submission ID / Order Number
+
+            </label>
+
+            <input
+
+                id="submissionSearch"
+
+                class="textbox"
+
+                type="text"
+
+                placeholder="Enter Submission ID or Order Number..."
+
+                autocomplete="off"
+
+                onkeyup="filterMySubmissions()">
+
+        </div>
+
+        <!-- Table -->
+
+        <div class="submissionTableContainer">
+
+            <table
+
+                id="mySubmissionTable"
+
+                class="submissionTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th style="width:220px;">
+
+                            Submission ID
+
+                        </th>
+
+                        <th style="width:160px;">
+
+                            Submitted On
+
+                        </th>
+
+                        <th style="width:140px;">
+
+                            Order Number
+
+                        </th>
+
+                        <th style="width:170px;">
+
+                            Latest Status
+
+                        </th>
+
+                        <th style="width:130px;">
+
+                            Action
+
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="mySubmissionTableBody">
+
+                    <tr>
+
+                        <td
+
+                            colspan="5"
+
+                            style="padding:40px;text-align:center;color:#666;">
+
+                            Loading submissions...
+
+                        </td>
+
+                    </tr>
+                                    </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- Record Count -->
+
+        <div
+            id="submissionCount"
+            class="submissionCount">
+
+        </div>
+
+        <!-- Loader -->
+
+        <div
+            id="submissionLoader"
+            class="loader">
+
+        </div>
+
+        <!-- Footer Buttons -->
+
+        <div class="submissionFooterButtons">
+
+            <button
+                class="secondaryButton"
+                onclick="backDashboard()">
+
+                ⬅ Back to Dashboard
+
+            </button>
+
+            <button
+                class="logoutButton"
+                onclick="logout()">
+
+                🚪 Logout
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- =========================================
+         SUBMISSION DETAILS MODAL
+    ========================================= -->
+
+    <div
+
+        id="submissionDetailsModal"
+
+        class="modalOverlay"
+
+        style="display:none;"
+
+        onclick="if(event.target===this)closeSubmissionDetails();">
+
+        <div class="detailsModal">
+
+            <div class="detailsHeader">
+
+                <span>
+
+                    📋 Submission Details
+
+                </span>
+
+                <button
+
+                    class="closeModalBtn"
+
+                    type="button"
+
+                    onclick="closeSubmissionDetails()">
+
+                    ✕
+
+                </button>
+
+            </div>
+
+            <div
+
+                id="submissionDetailsBody"
+
+                class="detailsBody">
+
+            </div>
+
+        </div>
+
+    </div>
