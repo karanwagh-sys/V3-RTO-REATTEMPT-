@@ -1,0 +1,92 @@
+<div id="pendingRequestsPage" style="display:none;">
+
+    <div class="card">
+
+        <h2>📋 Pending Requests</h2>
+
+        <p style="text-align:center;color:#666;margin-bottom:20px;">
+
+            Review pending RTO & Reattempt requests.
+
+        </p>
+
+        <label>
+
+            Search Order Number
+
+        </label>
+
+        <input
+            id="pendingSearch"
+            class="textbox"
+            type="text"
+            placeholder="Enter Order Number..."
+            onkeyup="filterPendingRequests()">
+
+        <div style="overflow-x:auto;margin-top:25px;">
+
+            <table
+                id="pendingTable"
+                class="dashboardTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Order</th>
+
+                        <th>Rider</th>
+
+                        <th>Reason</th>
+
+                        <th>Date</th>
+
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="pendingBody">
+
+                    <tr>
+
+                        <td colspan="5"
+                            style="padding:30px;text-align:center;">
+
+                            Loading Pending Requests...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div
+            id="pendingLoader"
+            class="loader">
+        </div>
+
+        <button
+            class="secondaryButton"
+            onclick="backAdminDashboard()">
+
+            ⬅ Back
+
+        </button>
+
+        <button
+            class="logoutButton"
+            onclick="logout()">
+
+            🚪 Logout
+
+        </button>
+
+    </div>
+
+</div>
