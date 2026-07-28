@@ -1,0 +1,114 @@
+<div id="dashboardPage" style="display:none;">
+
+    <div class="card">
+
+        <div style="text-align:center;">
+
+            <img
+                id="dashboardLogo"
+                class="logo"
+                src="https://drive.google.com/thumbnail?id=1BeVMVO-0efBXui7Xc5M3LQD2G3fzPSfH&sz=w600"
+                alt="TrueMeds Logo">
+
+            <div class="company">
+                TrueMeds
+            </div>
+
+            <h2>Welcome 👋</h2>
+
+            <p style="
+                color:#666;
+                margin-top:-10px;
+                margin-bottom:25px;">
+                Manage your RTO & Reattempt requests
+            </p>
+
+        </div>
+
+        <!-- Employee Information -->
+
+        <table class="dashboardTable">
+
+            <tr>
+
+                <td>👤 Rider Name</td>
+
+                <td id="dRider"></td>
+
+            </tr>
+
+            <tr>
+
+                <td>🆔 Employee ID</td>
+
+                <td id="dEmployee"></td>
+
+            </tr>
+
+            <tr>
+
+                <td>🌍 Zone</td>
+
+                <td id="dZone"></td>
+
+            </tr>
+
+            <tr>
+
+                <td>🏢 Warehouse</td>
+
+                <td id="dWarehouse"></td>
+
+            </tr>
+
+            <tr>
+
+                <td>📍 LM Hub</td>
+
+                <td id="dHub"></td>
+
+            </tr>
+
+            <tr>
+
+                <td>💼 Role</td>
+
+                <td id="dRole"></td>
+
+            </tr>
+
+        </table>
+
+        <!-- Quick Actions -->
+
+        <div style="margin-top:25px;">
+
+            <button
+                class="loginButton"
+                onclick="openSubmissionPage()">
+
+                📝 New Submission
+
+            </button>
+
+            <button
+                class="secondaryButton"
+                onclick="openMySubmissions()">
+
+                📄 My Submissions
+
+            </button>
+
+            <button
+                class="logoutButton"
+                onclick="logout()">
+
+                🚪 Logout
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
