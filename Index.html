@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="theme-color" content="#0057c2">
+
+<title>RTO & Reattempt Portal</title>
+
+<?!= include("CSS"); ?>
+
+</head>
+
+<body>
+
+<!-- Header -->
+
+<div class="header">
+
+    RTO & Reattempt Portal
+
+</div>
+
+<!-- Main Container -->
+
+<div class="container">
+
+    <div id="app">
+
+        <?!= include("Login"); ?>
+
+        <?!= include("Dashboard"); ?>
+
+        <?!= include("Submission"); ?>
+
+        <?!= include("MySubmissions"); ?>
+
+        <?!= include("AdminDashboard"); ?>
+
+        <?!= include("PendingRequests"); ?>
+
+        <?!= include("ReviewRequest"); ?>
+
+    </div>
+
+</div>
+
+<!-- Global Loader -->
+
+<div id="globalLoader" class="loader"></div>
+
+<?!= include("JavaScript"); ?>
+
+</body>
+
+</html>
