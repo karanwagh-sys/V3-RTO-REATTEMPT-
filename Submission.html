@@ -1,0 +1,265 @@
+<!-- =========================================
+     SUBMISSION PAGE
+========================================= -->
+
+<div id="submissionPage" style="display:none;">
+
+    <div class="card">
+
+        <div style="text-align:center;">
+
+            <h2>📝 RTO / Reattempt Submission</h2>
+
+            <p style="
+            color:#666;
+            margin-bottom:25px;">
+
+                Submit order details along with the required proof.
+
+            </p>
+
+        </div>
+
+        <!-- Order Number -->
+
+        <label>
+
+            Order Number
+
+            <span style="color:#d32f2f;">*</span>
+
+           </label>
+
+           <input
+
+           id="orderNumber"
+
+           class="textbox"
+
+           type="text"
+
+           maxlength="25"
+
+           autocomplete="off"
+
+           placeholder="Enter Order Number"
+
+           oninput="validateOrderNumber(this)"
+
+           onpaste="preventInvalidOrderPaste(event)">
+
+           <div
+
+           id="orderNumberError"
+
+           style="
+           min-height:18px;
+           color:#d32f2f;
+           font-size:12px;
+           margin-top:5px;">
+
+           </div>
+
+        <!-- Reason -->
+
+        <label style="margin-top:20px;">
+
+            Reason
+
+            <span style="color:#d32f2f;">*</span>
+
+        </label>
+
+        <select
+
+            id="reason"
+
+            class="textbox"
+
+            onchange="reasonChanged()">
+
+            <option>Loading...</option>
+
+        </select>
+
+        <!-- Mandatory Proof -->
+
+        <div
+
+            id="mandatorySection"
+
+            style="display:none;">
+
+            <label style="margin-top:22px;">
+
+                Mandatory Proof
+
+                <span
+                    id="mandatoryStar"
+                    style="color:#d32f2f;">
+
+                    *
+
+                </span>
+
+            </label>
+
+            <div class="uploadBox">
+
+                <input
+
+                    id="mandatoryFile"
+
+                    type="file"
+
+                    accept="image/*,video/*,audio/*,application/pdf"
+
+                    onchange="validateFile(this,'mandatory')">
+
+                <div
+
+                    id="mandatoryFileName"
+
+                    style="
+                    margin-top:12px;
+                    font-weight:600;
+                    color:#555;">
+
+                    📂 No file selected
+
+                </div>
+
+                <div style="
+                    margin-top:6px;
+                    color:#888;
+                    font-size:12px;">
+
+                    Supported:
+                    Images, PDF, Audio & Video
+
+                    <br>
+
+                    Maximum File Size : 20 MB
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Optional Proof -->
+
+        <label style="margin-top:25px;">
+
+            Optional Proof
+
+        </label>
+
+        <div class="uploadBox">
+
+            <input
+
+                id="optionalFile"
+
+                type="file"
+
+                accept="image/*,video/*,audio/*,application/pdf"
+
+                onchange="validateFile(this,'optional')">
+
+            <div
+
+                id="optionalFileName"
+
+                style="
+                margin-top:12px;
+                font-weight:600;
+                color:#555;">
+
+                📂 No file selected
+
+            </div>
+
+            <div style="
+                margin-top:6px;
+                color:#888;
+                font-size:12px;">
+
+                Supported:
+                Images, PDF, Audio & Video
+
+                <br>
+
+                Maximum File Size : 20 MB
+
+            </div>
+
+        </div>
+
+        <!-- Loader -->
+
+        <div
+
+            id="submitLoader"
+
+            class="loader">
+
+        </div>
+
+        <!-- Message -->
+
+        <div
+
+            id="submitMessage"
+
+            style="
+            min-height:22px;
+            margin-top:18px;
+            text-align:center;
+            font-weight:bold;">
+
+        </div>
+
+        <!-- Buttons -->
+
+        <button
+
+         id="submitBtn"
+
+         class="loginButton"
+
+         type="button"
+
+         onclick="submitRequest()">
+
+         ✅ Submit Request
+
+        </button>
+
+        <button
+
+            class="secondaryButton"
+
+            type="button"
+
+            onclick="backDashboard()">
+
+            ⬅ Back to Dashboard
+
+        </button>
+
+        <button
+
+            class="logoutButton"
+
+            type="button"
+
+            onclick="logout()">
+
+            🚪 Logout
+
+        </button>
+
+    </div>
+
+</div>
